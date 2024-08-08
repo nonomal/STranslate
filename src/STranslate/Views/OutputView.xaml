@@ -113,9 +113,11 @@
                                                       FontSize="{DynamicResource FontSize_Identify}"
                                                       Style="{DynamicResource ToggleButtonIconStyle}">
                                             <ToggleButton.Visibility>
-                                                <MultiBinding Converter="{StaticResource PromptToVisibilityMultiConverter}">
+                                                <MultiBinding
+                                                    Converter="{StaticResource PromptToVisibilityMultiConverter}">
                                                     <Binding Path="UserDefinePrompts" />
-                                                    <Binding Source="{StaticResource OutputVm}" Path="Data.IsPromptToggleVisible" />
+                                                    <Binding Source="{StaticResource OutputVm}"
+                                                             Path="Data.IsPromptToggleVisible" />
                                                 </MultiBinding>
                                             </ToggleButton.Visibility>
                                         </ToggleButton>
@@ -242,9 +244,11 @@
                                                     Style="{DynamicResource ButtonCopyIconStyle}"
                                                     ToolTip="复制为大驼峰字符串">
                                                 <Button.Visibility>
-                                                    <MultiBinding Converter="{StaticResource StringBoolean2VisibilityConverter}">
+                                                    <MultiBinding
+                                                        Converter="{StaticResource StringBoolean2VisibilityConverter}">
                                                         <Binding Path="Data.Result" />
-                                                        <Binding Source="{StaticResource OutputVm}" Path="Data.IsShowLargeHumpCopyBtn" />
+                                                        <Binding Source="{StaticResource OutputVm}"
+                                                                 Path="Data.IsShowLargeHumpCopyBtn" />
                                                     </MultiBinding>
                                                 </Button.Visibility>
                                             </Button>
@@ -257,9 +261,11 @@
                                                     Style="{DynamicResource ButtonCopyIconStyle}"
                                                     ToolTip="复制为小驼峰字符串">
                                                 <Button.Visibility>
-                                                    <MultiBinding Converter="{StaticResource StringBoolean2VisibilityConverter}">
+                                                    <MultiBinding
+                                                        Converter="{StaticResource StringBoolean2VisibilityConverter}">
                                                         <Binding Path="Data.Result" />
-                                                        <Binding Source="{StaticResource OutputVm}" Path="Data.IsShowSmallHumpCopyBtn" />
+                                                        <Binding Source="{StaticResource OutputVm}"
+                                                                 Path="Data.IsShowSmallHumpCopyBtn" />
                                                     </MultiBinding>
                                                 </Button.Visibility>
                                             </Button>
@@ -272,9 +278,11 @@
                                                     Style="{DynamicResource ButtonCopyIconStyle}"
                                                     ToolTip="复制为蛇形字符串">
                                                 <Button.Visibility>
-                                                    <MultiBinding Converter="{StaticResource StringBoolean2VisibilityConverter}">
+                                                    <MultiBinding
+                                                        Converter="{StaticResource StringBoolean2VisibilityConverter}">
                                                         <Binding Path="Data.Result" />
-                                                        <Binding Source="{StaticResource OutputVm}" Path="Data.IsShowSnakeCopyBtn" />
+                                                        <Binding Source="{StaticResource OutputVm}"
+                                                                 Path="Data.IsShowSnakeCopyBtn" />
                                                     </MultiBinding>
                                                 </Button.Visibility>
                                             </Button>
@@ -397,10 +405,15 @@
                             </Expander.Triggers>
                             <Grid>
                                 <TextBox PreviewMouseWheel="TextBox_PreviewMouseWheel"
+                                         dd:DragDrop.IsDragSource="False"
+                                         dd:DragDrop.IsDropTarget="False"
                                          Style="{DynamicResource TextBoxOutputStyle}"
                                          Tag="{Binding Data.IsSuccess}"
                                          Text="{Binding Data.Result}" />
-                                <StackPanel Margin="5" VerticalAlignment="Bottom" Orientation="Horizontal">
+                                <StackPanel Margin="5"
+                                            Visibility="{Binding Data.IsSuccess, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            VerticalAlignment="Bottom"
+                                            Orientation="Horizontal">
                                     <!-- TTS -->
                                     <Button Margin="5,0,0,0"
                                             Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.TTSCommand}"
@@ -419,9 +432,11 @@
                                             Style="{DynamicResource ButtonCopyIconStyle}"
                                             ToolTip="复制为蛇形字符串">
                                         <Button.Visibility>
-                                            <MultiBinding Converter="{StaticResource StringBoolean2VisibilityConverter}">
+                                            <MultiBinding
+                                                Converter="{StaticResource StringBoolean2VisibilityConverter}">
                                                 <Binding Path="Data.Result" />
-                                                <Binding Source="{StaticResource OutputVm}" Path="Data.IsShowSnakeCopyBtn" />
+                                                <Binding Source="{StaticResource OutputVm}"
+                                                         Path="Data.IsShowSnakeCopyBtn" />
                                             </MultiBinding>
                                         </Button.Visibility>
                                     </Button>
@@ -434,9 +449,11 @@
                                             Style="{DynamicResource ButtonCopyIconStyle}"
                                             ToolTip="复制为小驼峰字符串">
                                         <Button.Visibility>
-                                            <MultiBinding Converter="{StaticResource StringBoolean2VisibilityConverter}">
+                                            <MultiBinding
+                                                Converter="{StaticResource StringBoolean2VisibilityConverter}">
                                                 <Binding Path="Data.Result" />
-                                                <Binding Source="{StaticResource OutputVm}" Path="Data.IsShowSmallHumpCopyBtn" />
+                                                <Binding Source="{StaticResource OutputVm}"
+                                                         Path="Data.IsShowSmallHumpCopyBtn" />
                                             </MultiBinding>
                                         </Button.Visibility>
                                     </Button>
@@ -449,9 +466,11 @@
                                             Style="{DynamicResource ButtonCopyIconStyle}"
                                             ToolTip="复制为大驼峰字符串">
                                         <Button.Visibility>
-                                            <MultiBinding Converter="{StaticResource StringBoolean2VisibilityConverter}">
+                                            <MultiBinding
+                                                Converter="{StaticResource StringBoolean2VisibilityConverter}">
                                                 <Binding Path="Data.Result" />
-                                                <Binding Source="{StaticResource OutputVm}" Path="Data.IsShowLargeHumpCopyBtn" />
+                                                <Binding Source="{StaticResource OutputVm}"
+                                                         Path="Data.IsShowLargeHumpCopyBtn" />
                                             </MultiBinding>
                                         </Button.Visibility>
                                     </Button>
@@ -464,7 +483,7 @@
                                             Style="{DynamicResource ButtonCopyIconStyle}"
                                             ToolTip="直接复制结果"
                                             Visibility="{Binding Data.Result, Converter={StaticResource VisibilityConverter}}" />
-                                    
+
                                     <!-- // 插入文本 // -->
                                     <Button Margin="5,0,0,0"
                                             Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.InsertResultCommand}"
@@ -479,6 +498,29 @@
                                                 <Binding RelativeSource="{RelativeSource AncestorType=Window}" />
                                             </MultiBinding>
                                         </Button.CommandParameter>
+                                    </Button>
+                                    
+                                    <!-- 回译该结果 -->
+                                    <Button Margin="5,0,0,0"
+                                            Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.TranslateBackCommand}"
+                                            Content="&#xe687;"
+                                            Cursor="Hand"
+                                            Style="{DynamicResource ButtonCopyIconStyle}"
+                                            ToolTip="回译[强制回译](Ctrl+点击)">
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
+                                                <i:InvokeCommandAction Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.TranslateBackCommand}"
+                                                                       CommandParameter="{Binding Data.Result}" />
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
+                                        <Button.Visibility>
+                                            <MultiBinding
+                                                Converter="{StaticResource StringBoolean2VisibilityConverter}">
+                                                <Binding Path="Data.Result" />
+                                                <Binding Source="{StaticResource OutputVm}"
+                                                         Path="Data.IsShowTranslateBackBtn" />
+                                            </MultiBinding>
+                                        </Button.Visibility>
                                     </Button>
                                 </StackPanel>
                                 <!-- // 加载动画 // -->

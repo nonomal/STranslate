@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
+﻿using System.ComponentModel;
 using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
@@ -22,7 +17,7 @@ public partial class TranslatorOllama : TranslatorBase, ITranslatorLlm
     #region Constructor
 
     public TranslatorOllama()
-        : this(Guid.NewGuid(), "http://localhost:11443", "Ollama")
+        : this(Guid.NewGuid(), "http://localhost:11434", "Ollama")
     {
     }
 

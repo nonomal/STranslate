@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
@@ -63,7 +60,7 @@ public class ShortcutUtil
     /// <summary>
     ///     当前程序二进制文件路径
     /// </summary>
-    private static readonly string AppPath = $"{ConstStr.ExecutePath}\\{ConstStr.AppName}.exe";
+    private static readonly string AppPath = $"{ConstStr.ExecutePath}{ConstStr.AppName}.exe";
 
     /// <summary>
     ///     组合的开机启动目录中的快捷方式路径

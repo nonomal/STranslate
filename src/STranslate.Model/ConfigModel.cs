@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel;
-using System.Linq;
 
 namespace STranslate.Model;
 
@@ -39,11 +38,6 @@ public class ConfigModel
     ///     OCR结果翻译关闭OCR界面
     /// </summary>
     public bool CloseUIOcrRetTranslate { get; set; }
-
-    /// <summary>
-    ///     截图出现问题尝试一下
-    /// </summary>
-    public bool UnconventionalScreen { get; set; }
 
     /// <summary>
     ///     OCR时是否自动复制文本
@@ -261,6 +255,11 @@ public class ConfigModel
     public bool UseFormsCopy { get; set; }
 
     /// <summary>
+    ///     开启外部调用服务
+    /// </summary>
+    public bool ExternalCall { get; set; }
+
+    /// <summary>
     ///     外部调用端口
     /// </summary>
     public int? ExternalCallPort { get; set; }
@@ -311,6 +310,8 @@ public class ConfigModel
     public bool IsShowSmallHumpCopyBtn { get; set; }
 
     public bool IsShowLargeHumpCopyBtn { get; set; }
+    
+    public bool IsShowTranslateBackBtn { get; set; }
 
     /// <summary>
     ///     全屏模式下忽略热键
@@ -341,6 +342,16 @@ public class ConfigModel
     ///     热键触发复制后是否显示成功提示
     /// </summary>
     public bool HotkeyCopySuccessToast { get; set; } = true;
+
+    /// <summary>
+    ///    常用语种
+    /// </summary>
+    public string OftenUsedLang { get; set; } = string.Empty;
+    
+    /// <summary>
+    ///     是否缓存位置
+    /// </summary>
+    public bool UseCacheLocation { get; set; }
 
     /// <summary>
     ///     替换翻译
@@ -382,7 +393,6 @@ public class ConfigModel
             ThemeType = ThemeType,
             IsFollowMouse = IsFollowMouse,
             CloseUIOcrRetTranslate = CloseUIOcrRetTranslate,
-            UnconventionalScreen = UnconventionalScreen,
             IsOcrAutoCopyText = IsOcrAutoCopyText,
             IsAdjustContentTranslate = IsAdjustContentTranslate,
             IsRemoveLineBreakGettingWords = IsRemoveLineBreakGettingWords,
@@ -426,6 +436,7 @@ public class ConfigModel
             ChangedLang2Execute = ChangedLang2Execute,
             OcrChangedLang2Execute = OcrChangedLang2Execute,
             UseFormsCopy = UseFormsCopy,
+            ExternalCall = ExternalCall,
             ExternalCallPort = ExternalCallPort,
             OcrViewHeight = OcrViewHeight,
             OcrViewWidth = OcrViewWidth,
@@ -438,11 +449,14 @@ public class ConfigModel
             IsShowSnakeCopyBtn = IsShowSnakeCopyBtn,
             IsShowSmallHumpCopyBtn = IsShowSmallHumpCopyBtn,
             IsShowLargeHumpCopyBtn = IsShowLargeHumpCopyBtn,
+            IsShowTranslateBackBtn = IsShowTranslateBackBtn,
             IgnoreHotkeysOnFullscreen = IgnoreHotkeysOnFullscreen,
             StayMainViewWhenLoseFocus = StayMainViewWhenLoseFocus,
             MainOcrLang = MainOcrLang,
             ShowMainOcrLang = ShowMainOcrLang,
             HotkeyCopySuccessToast = HotkeyCopySuccessToast,
+            OftenUsedLang = OftenUsedLang,
+            UseCacheLocation = UseCacheLocation,
             ReplaceProp = (ReplaceProp)ReplaceProp.Clone(),
             Hotkeys = Hotkeys?.Clone(),
             Services = Services?.Clone(),
@@ -452,7 +466,7 @@ public class ConfigModel
     }
 }
 
-internal static class Extensions
+public static class Extensions
 {
     public static BindingList<T> Clone<T>(this BindingList<T> listToClone)
         where T : ITranslator

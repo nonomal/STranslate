@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
 using System.Net.Http;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Controls.Primitives;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -64,18 +60,18 @@ public partial class PaddleOCR : ObservableObject, IOCR
             LangEnum.ja
                 => new OCRModelConfig
                 {
-                    det_infer = ConstStr.PaddleOCRModelPath + "Multilingual_PP-OCRv3_det_slim_infer",
-                    rec_infer = ConstStr.PaddleOCRModelPath + "japan_PP-OCRv3_rec_infer",
-                    cls_infer = ConstStr.PaddleOCRModelPath + "ch_ppocr_mobile_v2.0_cls_infer",
-                    keys = ConstStr.PaddleOCRModelPath + "japan_dict.txt"
+                    det_infer = ConstStr.PaddleOcrModelPath + "Multilingual_PP-OCRv3_det_slim_infer",
+                    rec_infer = ConstStr.PaddleOcrModelPath + "japan_PP-OCRv3_rec_infer",
+                    cls_infer = ConstStr.PaddleOcrModelPath + "ch_ppocr_mobile_v2.0_cls_infer",
+                    keys = ConstStr.PaddleOcrModelPath + "japan_dict.txt"
                 },
             LangEnum.ko
                 => new OCRModelConfig
                 {
-                    det_infer = ConstStr.PaddleOCRModelPath + "Multilingual_PP-OCRv3_det_slim_infer",
-                    rec_infer = ConstStr.PaddleOCRModelPath + "korean_PP-OCRv3_rec_infer",
-                    cls_infer = ConstStr.PaddleOCRModelPath + "ch_ppocr_mobile_v2.0_cls_infer",
-                    keys = ConstStr.PaddleOCRModelPath + "korean_dict.txt"
+                    det_infer = ConstStr.PaddleOcrModelPath + "Multilingual_PP-OCRv3_det_slim_infer",
+                    rec_infer = ConstStr.PaddleOcrModelPath + "korean_PP-OCRv3_rec_infer",
+                    cls_infer = ConstStr.PaddleOcrModelPath + "ch_ppocr_mobile_v2.0_cls_infer",
+                    keys = ConstStr.PaddleOcrModelPath + "korean_dict.txt"
                 },
             // 使用默认中英文V4模型
             _ => null
@@ -270,11 +266,13 @@ public partial class PaddleOCR : ObservableObject, IOCR
 #if DEBUG
         HasData = true;
         return HasData;
-#endif
+#else
         HasData = true;
-        HasData &= Directory.Exists(ConstStr.PaddleOCRInterfaceDir);
-        ConstStr.PaddleOCRDlls.ForEach(x => HasData &= File.Exists(x));
+        // 使用绝对路径进行检查
+        HasData &= Directory.Exists(ConstStr.PaddleOcrModelPath);
+        ConstStr.PaddleOcrDlls.ForEach(x => HasData &= File.Exists(string.Format("{0}{1}", ConstStr.ExecutePath, x)));
         return HasData;
+#endif
     }
 
     /// <summary>
@@ -288,8 +286,8 @@ public partial class PaddleOCR : ObservableObject, IOCR
     {
         try
         {
-            ConstStr.PaddleOCRDlls.ForEach(File.Delete);
-            Directory.Delete(ConstStr.PaddleOCRInterfaceDir, true);
+            ConstStr.PaddleOcrDlls.ForEach(File.Delete);
+            Directory.Delete(ConstStr.PaddleOcrModelPath, true);    // 使用绝对路径
 
             ToastHelper.Show("删除成功", WindowType.Preference);
 
@@ -314,7 +312,7 @@ public partial class PaddleOCR : ObservableObject, IOCR
 
         if (!DataIntegrity())
         {
-            var msg = "离线数据不完整";
+            var msg = "离线数据不完整,请前往PaddleOCR配置页面进行下载";
 
             ToastHelper.Show(msg, WindowType.OCR);
 
@@ -333,10 +331,8 @@ public partial class PaddleOCR : ObservableObject, IOCR
             {
                 token.ThrowIfCancellationRequested();
 
-#if DEBUG
                 using (var _ = new TimerDisposable(timeElapsed => LogService.Logger.Debug($"PaddleOCR 耗时: {timeElapsed} ms")))
                 {
-#endif
                     var ocrResult = GetEngine(lang).DetectText(bytes);
 
                     // 在耗时操作后再次检查取消标志
@@ -348,9 +344,7 @@ public partial class PaddleOCR : ObservableObject, IOCR
                         tb.BoxPoints.ForEach(bp => ocrContent.BoxPoints.Add(new BoxPoint(bp.X, bp.Y)));
                         result.OcrContents.Add(ocrContent);
                     });
-#if DEBUG
                 }
-#endif
 
                 // 设置任务结果
                 tcs.SetResult(result);

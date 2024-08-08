@@ -1,7 +1,5 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using Newtonsoft.Json;
@@ -79,7 +77,7 @@ public class ConfigHelper
         MainViewIconOperate();
 
         //初始化外部调用服务
-        ExternalCallOperate(CurrentConfig?.ExternalCallPort ?? 50020);
+        ExternalCallOperate(CurrentConfig?.ExternalCall ?? false, CurrentConfig?.ExternalCallPort ?? 50020);
     }
 
     /// <summary>
@@ -200,7 +198,6 @@ public class ConfigHelper
         CurrentConfig.ThemeType = model.ThemeType;
         CurrentConfig.IsFollowMouse = model.IsFollowMouse;
         CurrentConfig.CloseUIOcrRetTranslate = model.CloseUIOcrRetTranslate;
-        CurrentConfig.UnconventionalScreen = model.UnconventionalScreen;
         CurrentConfig.IsOcrAutoCopyText = model.IsOcrAutoCopyText;
         CurrentConfig.IsAdjustContentTranslate = model.IsAdjustContentTranslate;
         CurrentConfig.IsRemoveLineBreakGettingWords = model.IsRemoveLineBreakGettingWords;
@@ -237,6 +234,7 @@ public class ConfigHelper
         CurrentConfig.ChangedLang2Execute = model.ChangedLang2Execute;
         CurrentConfig.OcrChangedLang2Execute = model.OcrChangedLang2Execute;
         CurrentConfig.UseFormsCopy = model.UseFormsCopy;
+        CurrentConfig.ExternalCall = model.ExternalCall;
         CurrentConfig.ExternalCallPort = model.ExternalCallPort;
         CurrentConfig.DetectType = model.DetectType;
         CurrentConfig.DisableGlobalHotkeys = model.DisableGlobalHotkeys;
@@ -247,17 +245,15 @@ public class ConfigHelper
         CurrentConfig.IsShowSnakeCopyBtn = model.IsShowSnakeCopyBtn;
         CurrentConfig.IsShowSmallHumpCopyBtn = model.IsShowSmallHumpCopyBtn;
         CurrentConfig.IsShowLargeHumpCopyBtn = model.IsShowLargeHumpCopyBtn;
+        CurrentConfig.IsShowTranslateBackBtn = model.IsShowTranslateBackBtn;
         CurrentConfig.IgnoreHotkeysOnFullscreen = model.IgnoreHotkeysOnFullscreen;
         CurrentConfig.StayMainViewWhenLoseFocus = model.StayMainViewWhenLoseFocus;
         CurrentConfig.MainOcrLang = model.MainOcrLang;
         CurrentConfig.ShowMainOcrLang = model.ShowMainOcrLang;
         CurrentConfig.HotkeyCopySuccessToast = model.HotkeyCopySuccessToast;
+        CurrentConfig.OftenUsedLang = model.OftenUsedLang;
+        CurrentConfig.UseCacheLocation = model.UseCacheLocation;
 
-        //输出界面显示控制
-        Singleton<OutputViewModel>.Instance.IsPromptToggleVisible = model.IsPromptToggleVisible;
-        Singleton<OutputViewModel>.Instance.IsShowSnakeCopyBtn = model.IsShowSnakeCopyBtn;
-        Singleton<OutputViewModel>.Instance.IsShowSmallHumpCopyBtn = model.IsShowSmallHumpCopyBtn;
-        Singleton<OutputViewModel>.Instance.IsShowLargeHumpCopyBtn = model.IsShowLargeHumpCopyBtn;
         //重新执行必要操作
         StartupOperate(CurrentConfig.IsStartup);
         ThemeOperate(CurrentConfig.ThemeType);
@@ -271,9 +267,17 @@ public class ConfigHelper
         );
         PlaceholderOperate(CurrentConfig.IsShowMainPlaceholder);
         MainViewIconOperate();
-        ExternalCallOperate(CurrentConfig.ExternalCallPort ?? 50020, true);
+        MainViewOftenUsedLangOperate();
+        ExternalCallOperate(CurrentConfig.ExternalCall, CurrentConfig.ExternalCallPort ?? 50020, true);
         MainViewShadowOperate(CurrentConfig.MainViewShadow);
         MainViewStayOperate(CurrentConfig.StayMainViewWhenLoseFocus);
+        //输出界面显示控制
+        OutputViewOperate(
+            CurrentConfig.IsPromptToggleVisible,
+            CurrentConfig.IsShowSnakeCopyBtn,
+            CurrentConfig.IsShowSmallHumpCopyBtn,
+            CurrentConfig.IsShowLargeHumpCopyBtn,
+            CurrentConfig.IsShowTranslateBackBtn);
 
         if (!isHotkeyConfSame)
             DisableGlobalHotkeysOperate(CurrentConfig.DisableGlobalHotkeys,
@@ -383,9 +387,9 @@ public class ConfigHelper
         catch (Exception ex)
         {
             // 备份当前config
-            BackupCurrentConfig();
+            var path = BackupCurrentConfig();
 
-            //LogService.Logger.Error($"[READ CONFIG] 读取配置错误，已备份旧配置至: {path} 当前加载初始化配置...", ex);
+            LogService.Logger.Error($"[READ CONFIG] 读取配置错误，已备份旧配置至: {path} 当前加载初始化配置...", ex);
             return InitialConfig();
         }
     }
@@ -588,14 +592,23 @@ public class ConfigHelper
         Singleton<MainViewModel>.Instance.UpdateMainViewIcons();
     }
 
+    private void MainViewOftenUsedLangOperate()
+    {
+        Singleton<MainViewModel>.Instance.InputVM.UpdateOftenUsedLang();
+    }
+
     /// <summary>
     ///     外部调用功能
     /// </summary>
+    /// <param name="can"></param>
     /// <param name="port"></param>
     /// <param name="isStop"></param>
-    private void ExternalCallOperate(int port, bool isStop = false)
+    private void ExternalCallOperate(bool can, int port, bool isStop = false)
     {
-        Singleton<ExternalCallHelper>.Instance.StartService($"http://127.0.0.1:{port}/", isStop);
+        if (can)
+            Singleton<ExternalCallHelper>.Instance.StartService($"http://127.0.0.1:{port}/", isStop);
+        else
+            Singleton<ExternalCallHelper>.Instance.StopService();
     }
 
     /// <summary>
@@ -625,6 +638,23 @@ public class ConfigHelper
     private void DisableGlobalHotkeysOperate(bool value, Window view)
     {
         Singleton<NotifyIconViewModel>.Instance.InvokeForbiddenShotcuts(view, value);
+    }
+
+    /// <summary>
+    ///     输出界面显示按钮控制
+    /// </summary>
+    /// <param name="isPromptToggleVisible"></param>
+    /// <param name="isShowSnakeCopyBtn"></param>
+    /// <param name="isShowSmallHumpCopyBtn"></param>
+    /// <param name="isShowLargeHumpCopyBtn"></param>
+    /// <param name="isShowTranslateBackBtn"></param>
+    private void OutputViewOperate(bool isPromptToggleVisible, bool isShowSnakeCopyBtn, bool isShowSmallHumpCopyBtn, bool isShowLargeHumpCopyBtn, bool isShowTranslateBackBtn)
+    {
+        Singleton<OutputViewModel>.Instance.IsPromptToggleVisible = isPromptToggleVisible;
+        Singleton<OutputViewModel>.Instance.IsShowSnakeCopyBtn = isShowSnakeCopyBtn;
+        Singleton<OutputViewModel>.Instance.IsShowSmallHumpCopyBtn = isShowSmallHumpCopyBtn;
+        Singleton<OutputViewModel>.Instance.IsShowLargeHumpCopyBtn = isShowLargeHumpCopyBtn;
+        Singleton<OutputViewModel>.Instance.IsShowTranslateBackBtn = isShowTranslateBackBtn;
     }
 
     #endregion 私有方法
@@ -662,7 +692,6 @@ public class ConfigHelper
             IsStartup = false,
             IsFollowMouse = false,
             IsOcrAutoCopyText = false,
-            UnconventionalScreen = false,
             CloseUIOcrRetTranslate = false,
             IsAdjustContentTranslate = false,
             IsRemoveLineBreakGettingWords = false,
@@ -701,6 +730,7 @@ public class ConfigHelper
             TargetLang = LangEnum.auto,
             ChangedLang2Execute = false,
             UseFormsCopy = false,
+            ExternalCall = false,
             ExternalCallPort = 50020,
             OcrViewHeight = 400,
             OcrViewWidth = 1000,
@@ -713,10 +743,13 @@ public class ConfigHelper
             IsShowSnakeCopyBtn = false,
             IsShowSmallHumpCopyBtn = false,
             IsShowLargeHumpCopyBtn = false,
+            IsShowTranslateBackBtn = false,
             IgnoreHotkeysOnFullscreen = false,
             MainOcrLang = LangEnum.auto,
             ShowMainOcrLang = false,
             HotkeyCopySuccessToast = true,
+            OftenUsedLang = string.Empty,
+            UseCacheLocation = false,
             ReplaceProp = new ReplaceProp(),
             Services =
             [
@@ -809,13 +842,11 @@ public class ReplaceConverter : JsonConverter<ReplaceProp>
             TargetLang = (LangEnum)targetLang
         };
 
-        var obj = jsonObject["ActiveService"]!.Value<object>();
-        if (obj is not null)
-        {
-            var service = JsonConvert.DeserializeObject<ITranslator>(obj.ToString(),
-                new JsonSerializerSettings { Converters = { new TranslatorConverter() } });
-            model.ActiveService = service;
-        }
+        var obj = jsonObject["ActiveService"]?.Value<object>();
+        if (obj is null) return model;
+        var service = JsonConvert.DeserializeObject<ITranslator>(obj.ToString() ?? string.Empty,
+            new JsonSerializerSettings { Converters = { new TranslatorConverter() } });
+        model.ActiveService = service;
 
         return model;
     }

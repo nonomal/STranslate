@@ -1,28 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using STranslate.Util;
+using STranslate.ViewModels.Preference;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
-namespace STranslate.Views
+namespace STranslate.Views;
+
+/// <summary>
+///     LangView.xaml 的交互逻辑
+/// </summary>
+public partial class LangView : UserControl
 {
-    /// <summary>
-    /// LangView.xaml 的交互逻辑
-    /// </summary>
-    public partial class LangView : UserControl
+    public LangView()
     {
-        public LangView()
+        InitializeComponent();
+
+        Singleton<CommonViewModel>.Instance.OnOftenUsedLang += () =>
         {
-            InitializeComponent();
-        }
+            BindingOperations.GetMultiBindingExpression(SourceLangCb, ItemsControl.ItemsSourceProperty)?.UpdateTarget();
+            BindingOperations.GetMultiBindingExpression(TargetLangCb, ItemsControl.ItemsSourceProperty)?.UpdateTarget();
+        };
     }
 }

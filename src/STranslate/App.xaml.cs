@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using System.Windows;
 using System.Windows.Threading;
 using STranslate.Helper;
@@ -37,11 +35,7 @@ public partial class App : Application
         }
 
         // 3. 开启日志服务
-#if DEBUG
         LogService.Register();
-#elif !DEBUG
-            LogService.Register(minLevel: LogLevel.Info);
-#endif
 
         // 4. 开启监听系统代理
         ProxyUtil.LoadDynamicProxy();
@@ -91,7 +85,7 @@ public partial class App : Application
         ProcessStartInfo startInfo =
             new()
             {
-                FileName = $"{ConstStr.ExecutePath}\\{ConstStr.AppName}.exe",
+                FileName = $"{ConstStr.ExecutePath}{ConstStr.AppName}.exe",
                 UseShellExecute = true,
                 Verb = "runas" // 提升权限
             };

@@ -1,8 +1,4 @@
-﻿using System;
-using System.ComponentModel;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
@@ -17,13 +13,9 @@ public partial class ReplaceViewModel : ObservableObject
 {
     private readonly ConfigHelper _configHelper = Singleton<ConfigHelper>.Instance;
     private readonly TranslatorViewModel _translateVm = Singleton<TranslatorViewModel>.Instance;
-
+    public InputViewModel InputVm => Singleton<InputViewModel>.Instance;
     public ReplaceViewModel()
     {
-        AllServices = _translateVm.CurTransServiceList;
-
-        // load initial value from conf
-        ReplaceProp = _configHelper.CurrentConfig?.ReplaceProp ?? new ReplaceProp();
         // View 上绑定结果从List中获取
         ReplaceProp.ActiveService = AllServices.FirstOrDefault(x => x.Identify == ReplaceProp.ActiveService?.Identify);
 
@@ -45,6 +37,7 @@ public partial class ReplaceViewModel : ObservableObject
             Singleton<NotifyIconViewModel>.Instance.ShowBalloonTip("请先选择替换翻译服务后重试");
             return;
         }
+
         try
         {
             const string translating = "翻译中...";
@@ -156,9 +149,9 @@ public partial class ReplaceViewModel : ObservableObject
 
     #region Property
 
-    [ObservableProperty] private BindingList<ITranslator> _allServices;
+    [ObservableProperty] private BindingList<ITranslator> _allServices = Singleton<TranslatorViewModel>.Instance.CurTransServiceList.Clone();
 
-    [ObservableProperty] private ReplaceProp _replaceProp;
+    [ObservableProperty] private ReplaceProp _replaceProp = Singleton<ConfigHelper>.Instance.CurrentConfig?.ReplaceProp ?? new ReplaceProp();
 
     #endregion
 
@@ -181,8 +174,15 @@ public partial class ReplaceViewModel : ObservableObject
     [RelayCommand]
     private void Reset()
     {
+        AllServices.Clear();
+
+        foreach (var service in _translateVm.CurTransServiceList) AllServices.Add(service);
+
         ReplaceProp = _configHelper.CurrentConfig?.ReplaceProp ?? new ReplaceProp();
 
+        // View 上绑定结果从List中获取
+        ReplaceProp.ActiveService = AllServices.FirstOrDefault(x => x.Identify == ReplaceProp.ActiveService?.Identify);
+        
         ToastHelper.Show("重置配置", WindowType.Preference);
     }
 

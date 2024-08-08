@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Drawing;
 using System.Windows;
 using System.Windows.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Win32;
+using ScreenGrab;
 using STranslate.Helper;
 using STranslate.Log;
 using STranslate.Model;
@@ -48,11 +44,6 @@ public partial class NotifyIconViewModel : ObservableObject
     ///     图标、提示
     /// </summary>
     public NotifyIconModel NIModel { get; } = new();
-
-    /// <summary>
-    ///     是否可以调用截图View
-    /// </summary>
-    public bool CanOpenScreenshot { get; set; } = true;
 
     /// <summary>
     ///     屏蔽快捷键事件
@@ -110,7 +101,7 @@ public partial class NotifyIconViewModel : ObservableObject
                     if (string.IsNullOrWhiteSpace(content))
                         ScreenShotHandler();
                     else
-                        await ScreenshotCallback(BitmapUtil.ReadImageFile(content));
+                        await ScreenshotCallbackAsync(BitmapUtil.ReadImageFile(content));
                 }
             },
             { ExternalCallAction.translate_crossword, (view, _) => CrossWordTranslate(view) },
@@ -123,7 +114,7 @@ public partial class NotifyIconViewModel : ObservableObject
                     if (string.IsNullOrWhiteSpace(content))
                         OCRHandler();
                     else
-                        await OCRCallback(BitmapUtil.ReadImageFile(content));
+                        await OCRCallbackAsync(BitmapUtil.ReadImageFile(content));
                 }
             },
             {
@@ -137,7 +128,7 @@ public partial class NotifyIconViewModel : ObservableObject
                     else
                     {
                         var bitmap = BitmapUtil.ReadImageFile(content);
-                        if (bitmap != null) await SilentOCRCallback(new Tuple<Bitmap, double, double>(bitmap, 0, 0));
+                        if (bitmap != null) await SilentOCRCallbackAsync(new Tuple<Bitmap, double, double>(bitmap, 0, 0));
                     }
                 }
             },
@@ -266,32 +257,61 @@ public partial class NotifyIconViewModel : ObservableObject
         OnMousehook?.Invoke(view);
     }
 
-    [RelayCommand]
-    private void QRCode(object obj)
+    private void ScreenshotHandler(object? obj, Action? action)
     {
-        if (!CanOpenScreenshot)
-            return;
+        switch (obj)
+        {
+            case null:
+                var haveActive = Application.Current.Windows.Cast<Window>()
+                    .Aggregate(false, (current, window) => current | window.IsActive);
+                if (haveActive)
+                    break;
+                goto Last;
+            case "header":
+                HideMainView();
+                break;
+        }
 
-        if (obj is null) goto Last;
-
-        if (obj.Equals("header")) HideMainView();
-
-        Task.Delay(200).ContinueWith(_ => CommonUtil.InvokeOnUIThread(() => QRCodeHandler()));
+        Task.Delay(200).ContinueWith(_ => CommonUtil.InvokeOnUIThread(() => action?.Invoke()));
 
         return;
 
-        Last:
-        QRCodeHandler();
+    Last:
+        action?.Invoke();
     }
+
+    private async Task ScreenshotHandlerAsync(object? obj, Action<CancellationToken?>? action, CancellationToken token)
+    {
+        switch (obj)
+        {
+            case null:
+                var haveActive = Application.Current.Windows.Cast<Window>()
+                    .Aggregate(false, (current, window) => current | window.IsActive);
+                if (haveActive)
+                    break;
+                goto Last;
+            case "header":
+                HideMainView();
+                break;
+        }
+
+        await Task.Delay(200, token)
+            .ContinueWith(_ => CommonUtil.InvokeOnUIThread(() => action?.Invoke(token)), token);
+
+        return;
+
+    Last:
+        action?.Invoke(token);
+    }
+
+    [RelayCommand]
+    private void QRCode(object obj) => ScreenshotHandler(obj, QRCodeHandler);
 
     internal void QRCodeHandler()
     {
-        ScreenshotView view = new();
-        ShowAndActive(view);
-
-        view.BitmapCallback += tuple => QRCodeCallback(tuple.Item1);
-        view.OnViewVisibilityChanged += o => CanOpenScreenshot = o;
-        view.InvokeCanOpen();
+        if (ScreenGrabber.IsCapturing) return;
+        ScreenGrabber.OnCaptured = bitmap => QRCodeCallback(bitmap);
+        ScreenGrabber.Capture(_configHelper.CurrentConfig?.ShowAuxiliaryLine ?? true);
     }
 
     private void QRCodeCallback(Bitmap? bitmap)
@@ -316,34 +336,16 @@ public partial class NotifyIconViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OCR(object obj)
-    {
-        if (!CanOpenScreenshot)
-            return;
-
-        if (obj == null) goto Last;
-
-        if (obj.Equals("header")) HideMainView();
-
-        Task.Delay(200).ContinueWith(_ => CommonUtil.InvokeOnUIThread(() => OCRHandler()));
-
-        return;
-
-        Last:
-        OCRHandler();
-    }
+    private void OCR(object obj) => ScreenshotHandler(obj, OCRHandler);
 
     internal void OCRHandler()
     {
-        ScreenshotView view = new();
-        ShowAndActive(view);
-
-        view.BitmapCallback += async tuple => await OCRCallback(tuple.Item1);
-        view.OnViewVisibilityChanged += o => CanOpenScreenshot = o;
-        view.InvokeCanOpen();
+        if (ScreenGrabber.IsCapturing) return;
+        ScreenGrabber.OnCaptured = async bitmap => await OCRCallbackAsync(bitmap);
+        ScreenGrabber.Capture(_configHelper.CurrentConfig?.ShowAuxiliaryLine ?? true);
     }
 
-    private async Task OCRCallback(Bitmap? bitmap)
+    private async Task OCRCallbackAsync(Bitmap? bitmap)
     {
         if (bitmap == null)
         {
@@ -366,40 +368,24 @@ public partial class NotifyIconViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SilentOCR(object? obj)
-    {
-        if (!CanOpenScreenshot)
-            return;
-
-        if (obj == null) goto Last;
-
-        if (obj.Equals("header")) HideMainView();
-
-        Task.Delay(200).ContinueWith(_ => CommonUtil.InvokeOnUIThread(() => SilentOCRHandler()));
-
-        return;
-
-        Last:
-        SilentOCRHandler();
-    }
+    private void SilentOCR(object? obj) => ScreenshotHandler(obj, SilentOCRHandler);
 
     internal void SilentOCRHandler()
     {
-        ScreenshotView view = new();
-        ShowAndActive(view);
-
-        view.BitmapCallback += async tuple => await SilentOCRCallback(tuple);
-        view.OnViewVisibilityChanged += o => CanOpenScreenshot = o;
-        view.InvokeCanOpen();
+        if (ScreenGrabber.IsCapturing) return;
+        var position = CommonUtil.GetPositionInfos().Item1;
+        ScreenGrabber.OnCaptured = async bitmap => await SilentOCRCallbackAsync(new Tuple<Bitmap, double, double>(bitmap, position.X, position.Y));
+        ScreenGrabber.Capture(_configHelper.CurrentConfig?.ShowAuxiliaryLine ?? true);
     }
 
-    private async Task SilentOCRCallback(Tuple<Bitmap, double, double> tuple)
+    private async Task SilentOCRCallbackAsync(Tuple<Bitmap, double, double> tuple)
     {
         try
         {
             var getText = "";
             var bytes = BitmapUtil.ConvertBitmap2Bytes(tuple.Item1);
-            var ocrResult = await Singleton<OCRScvViewModel>.Instance.ExecuteAsync(bytes, WindowType.Main, lang: _configHelper.CurrentConfig?.MainOcrLang ?? LangEnum.auto);
+            var ocrResult = await Singleton<OCRScvViewModel>.Instance.ExecuteAsync(bytes, WindowType.Main,
+                lang: _configHelper.CurrentConfig?.MainOcrLang ?? LangEnum.auto);
             //判断结果
             if (!ocrResult.Success) throw new Exception(ocrResult.ErrorMsg);
             getText = ocrResult.Text;
@@ -424,38 +410,16 @@ public partial class NotifyIconViewModel : ObservableObject
     }
 
     [RelayCommand(IncludeCancelCommand = true)]
-    private async Task ScreenShotTranslateAsync(object obj, CancellationToken token)
-    {
-        if (!CanOpenScreenshot)
-            return;
-
-        switch (obj)
-        {
-            case null:
-                goto Last;
-            case "header":
-                HideMainView();
-                break;
-        }
-
-        await Task.Delay(200, token)
-            .ContinueWith(_ => CommonUtil.InvokeOnUIThread(() => ScreenShotHandler(token)), token);
-        return;
-
-        Last:
-        ScreenShotHandler(token);
-    }
+    private async Task ScreenShotTranslateAsync(object obj, CancellationToken token) => await ScreenshotHandlerAsync(obj, ScreenShotHandler, token);
 
     internal void ScreenShotHandler(CancellationToken? token = null)
     {
-        ScreenshotView view = new();
-        ShowAndActive(view);
-        view.BitmapCallback += async tuple => await ScreenshotCallback(tuple.Item1, token);
-        view.OnViewVisibilityChanged += o => CanOpenScreenshot = o;
-        view.InvokeCanOpen();
+        if (ScreenGrabber.IsCapturing) return;
+        ScreenGrabber.OnCaptured = async bitmap => await ScreenshotCallbackAsync(bitmap, token);
+        ScreenGrabber.Capture(_configHelper.CurrentConfig?.ShowAuxiliaryLine ?? true);
     }
 
-    internal async Task ScreenshotCallback(Bitmap? bitmap, CancellationToken? token = null)
+    internal async Task ScreenshotCallbackAsync(Bitmap? bitmap, CancellationToken? token = null)
     {
         if (bitmap == null)
         {
@@ -491,7 +455,8 @@ public partial class NotifyIconViewModel : ObservableObject
                 _inputViewModel.InputContent = " ";
             IsScreenshotExecuting = true;
             var getText = "";
-            var ocrResult = await Singleton<OCRScvViewModel>.Instance.ExecuteAsync(bytes, WindowType.Main, token, lang: _configHelper.CurrentConfig?.MainOcrLang ?? LangEnum.auto);
+            var ocrResult = await Singleton<OCRScvViewModel>.Instance.ExecuteAsync(bytes, WindowType.Main, token,
+                _configHelper.CurrentConfig?.MainOcrLang ?? LangEnum.auto);
             //判断结果
             if (!ocrResult.Success) throw new Exception("OCR失败: " + ocrResult.ErrorMsg);
             getText = ocrResult.Text;
@@ -541,7 +506,7 @@ public partial class NotifyIconViewModel : ObservableObject
             ShowAndActive(view);
     }
 
-    internal void ClearOutput()
+    public void ClearOutput()
     {
         //清空输出相关
         Singleton<OutputViewModel>.Instance.Clear();

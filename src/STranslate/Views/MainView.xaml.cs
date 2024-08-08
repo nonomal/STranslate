@@ -1,6 +1,4 @@
-﻿using System;
-using System.ComponentModel;
-using System.Linq;
+﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -28,19 +26,6 @@ public partial class MainView : Window
         _vm.NotifyIconVM.OnExit += UnLoadPosition;
 
         InitializeComponent();
-
-        LoadPosition();
-    }
-
-    /// <summary>
-    ///     退出前取消事件订阅
-    /// </summary>
-    /// <param name="e"></param>
-    protected override void OnClosing(CancelEventArgs e)
-    {
-        _vm.NotifyIconVM.OnExit -= UnLoadPosition;
-
-        base.OnClosing(e);
     }
 
     /// <summary>
@@ -58,6 +43,8 @@ public partial class MainView : Window
     /// </summary>
     private void LoadPosition()
     {
+        if (!(_configHelper.CurrentConfig?.UseCacheLocation ?? false))
+            return;
         var position = _configHelper.CurrentConfig?.Position;
         try
         {
@@ -67,15 +54,25 @@ public partial class MainView : Window
             var ret = true;
             ret &= double.TryParse(args[0], out var left);
             ret &= double.TryParse(args[1], out var top);
+            if (!ret) throw new Exception();
 
             // 判断是否在屏幕上
-            _ = Screen.AllScreens.FirstOrDefault(screen => screen.Bounds.Contains(new Point(left, top))) ??
-                throw new Exception();
+            // 增加偏移量，防止窗口被遮挡
+            const double offsetRatio = 0.1; // 偏移比例
+            var screen = Screen.AllScreens.FirstOrDefault(screen =>
+            {
+                var workingArea = screen.WpfWorkingArea;
+                var hOffset = workingArea.Width * offsetRatio;
+                var vOffset = workingArea.Height * offsetRatio;
+                var point = new Point(left + hOffset, top + vOffset);
+                return screen.WpfBounds.Contains(point);
+            });
+            if (screen == null) throw new Exception();
 
             Left = left;
             Top = top;
         }
-        catch (Exception)
+        catch
         {
             // 计算窗口左上角在屏幕上的位置
             var left = (SystemParameters.PrimaryScreenWidth - Width) / 2;
@@ -86,19 +83,6 @@ public partial class MainView : Window
             Top = top;
 
             LogService.Logger.Warn($"加载上次窗口位置({position})失败，启用默认位置");
-        }
-
-        // 首次加载时是否隐藏界面
-        if (!(_configHelper.CurrentConfig?.IsHideOnStart ?? false))
-        {
-            // 尝试移动窗口到屏幕最上层
-            WindowHelper.SetWindowInForeground(this);
-            // 第一次加载页面激活输入框
-            (InputView.FindName("InputTB") as TextBox)?.Focus();
-        }
-        else
-        {
-            MainWindow.Visibility = Visibility.Hidden;
         }
     }
 
@@ -127,6 +111,12 @@ public partial class MainView : Window
 
     protected override void OnSourceInitialized(EventArgs e)
     {
+        #region 加载缓存位置
+
+        LoadPosition();
+
+        #endregion
+
         #region 初始化失焦保持显示
 
         _configHelper.MainViewStayOperate(_configHelper.CurrentConfig?.StayMainViewWhenLoseFocus ?? false);
@@ -140,7 +130,6 @@ public partial class MainView : Window
         #endregion 初始化时阴影
 
         #region 开启时隐藏主界面
-
 
         // 初始化动画标记
         AnimationHelper.Init();
@@ -157,6 +146,13 @@ public partial class MainView : Window
 
             // 显示信息
             Singleton<NotifyIconViewModel>.Instance.ShowBalloonTip(msg);
+        }
+        else
+        {
+            // 尝试移动窗口到屏幕最上层
+            WindowHelper.SetWindowInForeground(this);
+            // 第一次加载页面激活输入框
+            (InputView.FindName("InputTB") as TextBox)?.Focus();
         }
 
         #endregion 开启时隐藏主界面

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -10,6 +7,8 @@ using STranslate.Helper;
 using STranslate.Log;
 using STranslate.Model;
 using STranslate.Util;
+using STranslate.Views;
+using STranslate.Views.Preference;
 
 namespace STranslate.ViewModels.Preference;
 
@@ -55,7 +54,12 @@ public partial class CommonViewModel : ObservableObject
     private DoubleTapFuncEnum _doubleTapTrayFunc = CurConfig?.DoubleTapTrayFunc ?? DoubleTapFuncEnum.InputFunc;
 
     /// <summary>
-    ///     使用windows forms库中的Clipboard尝试解决剪贴板占用问题
+    ///     是否启用外部调用服务
+    /// </summary>
+    [ObservableProperty] private bool _externalCall = CurConfig?.ExternalCall ?? false;
+
+    /// <summary>
+    ///     外部调用服务端口
     /// </summary>
     [ObservableProperty] private int? _externalCallPort = CurConfig?.ExternalCallPort ?? 50020;
 
@@ -65,6 +69,12 @@ public partial class CommonViewModel : ObservableObject
     ///     历史记录大小
     /// </summary>
     private long _historySizeType = 1;
+
+
+    /// <summary>
+    ///     热键触发复制后是否显示成功提示
+    /// </summary>
+    [ObservableProperty] private bool _hotkeyCopySuccessToast = CurConfig?.HotkeyCopySuccessToast ?? true;
 
     /// <summary>
     ///     全屏模式下忽略热键
@@ -145,6 +155,8 @@ public partial class CommonViewModel : ObservableObject
     [ObservableProperty] private bool _isShowIncrementalTranslation = CurConfig?.IsShowIncrementalTranslation ?? false;
 
     [ObservableProperty] private bool _isShowLargeHumpCopyBtn = CurConfig?.IsShowLargeHumpCopyBtn ?? false;
+    
+    [ObservableProperty] private bool _isShowTranslateBackBtn = CurConfig?.IsShowTranslateBackBtn ?? false;
 
     /// <summary>
     ///     是否显示主窗口提示词
@@ -186,11 +198,6 @@ public partial class CommonViewModel : ObservableObject
     [ObservableProperty] private bool _isShowSnakeCopyBtn = CurConfig?.IsShowSnakeCopyBtn ?? false;
 
     /// <summary>
-    ///     显示主界面截图翻译语种选择图标
-    /// </summary>
-    [ObservableProperty] private bool _showMainOcrLang = CurConfig?.ShowMainOcrLang ?? false;
-
-    /// <summary>
     ///     是否开机启动
     /// </summary>
     [ObservableProperty] private bool _isStartup = CurConfig?.IsStartup ?? false;
@@ -199,6 +206,11 @@ public partial class CommonViewModel : ObservableObject
     ///     是否开启重复触发显示界面为显示/隐藏
     /// </summary>
     [ObservableProperty] private bool _isTriggerShowHide = CurConfig?.IsTriggerShowHide ?? false;
+
+    /// <summary>
+    ///     主界面截图识别语种
+    /// </summary>
+    [ObservableProperty] private LangEnum _mainOcrLang = CurConfig?.MainOcrLang ?? LangEnum.auto;
 
     /// <summary>
     ///     主窗口阴影
@@ -215,6 +227,11 @@ public partial class CommonViewModel : ObservableObject
     ///     OCR修改语言后立即翻译
     /// </summary>
     [ObservableProperty] private bool _ocrChangedLang2Execute = CurConfig?.OcrChangedLang2Execute ?? true;
+
+    /// <summary>
+    ///     常用语言
+    /// </summary>
+    [ObservableProperty] private string _oftenUsedLang = CurConfig?.OftenUsedLang ?? string.Empty;
 
     /// <summary>
     ///     代理服务器IP
@@ -254,6 +271,11 @@ public partial class CommonViewModel : ObservableObject
     private RelayCommand<string>? _showEncryptInfoCommand;
 
     /// <summary>
+    ///     显示主界面截图翻译语种选择图标
+    /// </summary>
+    [ObservableProperty] private bool _showMainOcrLang = CurConfig?.ShowMainOcrLang ?? false;
+
+    /// <summary>
     ///     丢失焦点时主界面不隐藏
     /// </summary>
     [ObservableProperty] private bool _stayMainViewWhenLoseFocus = CurConfig?.StayMainViewWhenLoseFocus ?? false;
@@ -262,8 +284,6 @@ public partial class CommonViewModel : ObservableObject
     ///     主题类型
     /// </summary>
     [ObservableProperty] private ThemeType _themeType = CurConfig?.ThemeType ?? ThemeType.Light;
-
-    [ObservableProperty] private bool _unconventionalScreen = CurConfig?.UnconventionalScreen ?? false;
 
     /// <summary>
     ///     使用windows forms库中的Clipboard尝试解决剪贴板占用问题
@@ -275,18 +295,13 @@ public partial class CommonViewModel : ObservableObject
     /// </summary>
     [ObservableProperty] private int _wordPickingInterval = CurConfig?.WordPickingInterval ?? 100;
 
+    /// <summary>
+    ///     是否缓存位置
+    /// </summary>
+    [ObservableProperty] private bool _useCacheLocation = CurConfig?.UseCacheLocation ?? false;
+
     public long HistorySize = CurConfig?.HistorySize ?? 100;
-
-    /// <summary>
-    /// 主界面截图识别语种
-    /// </summary>
-    [ObservableProperty] private LangEnum _mainOcrLang = CurConfig?.MainOcrLang ?? LangEnum.auto;
-
-
-    /// <summary>
-    ///     热键触发复制后是否显示成功提示
-    /// </summary>
-    [ObservableProperty] private bool _hotkeyCopySuccessToast = CurConfig?.HotkeyCopySuccessToast ?? true;
+    public Action? OnOftenUsedLang;
 
     public CommonViewModel()
     {
@@ -298,6 +313,8 @@ public partial class CommonViewModel : ObservableObject
         // 加载历史记录类型
         LoadHistorySizeType();
     }
+
+    public InputViewModel InputVm => Singleton<InputViewModel>.Instance;
 
     public long HistorySizeType
     {
@@ -388,7 +405,6 @@ public partial class CommonViewModel : ObservableObject
         ThemeType = CurConfig?.ThemeType ?? ThemeType.Light;
         IsFollowMouse = CurConfig?.IsFollowMouse ?? false;
         CloseUIOcrRetTranslate = CurConfig?.CloseUIOcrRetTranslate ?? false;
-        UnconventionalScreen = CurConfig?.UnconventionalScreen ?? false;
         IsOcrAutoCopyText = CurConfig?.IsOcrAutoCopyText ?? false;
         IsAdjustContentTranslate = CurConfig?.IsAdjustContentTranslate ?? false;
         IsRemoveLineBreakGettingWords = CurConfig?.IsRemoveLineBreakGettingWords ?? false;
@@ -425,6 +441,7 @@ public partial class CommonViewModel : ObservableObject
         OcrChangedLang2Execute = CurConfig?.OcrChangedLang2Execute ?? false;
         UseFormsCopy = CurConfig?.UseFormsCopy ?? false;
         ExternalCallPort = CurConfig?.ExternalCallPort ?? 50020;
+        ExternalCall = CurConfig?.ExternalCall ?? false;
         DetectType = CurConfig?.DetectType ?? LangDetectType.Local;
         DisableGlobalHotkeys = CurConfig?.DisableGlobalHotkeys ?? false;
         MainViewMaxHeight = CurConfig?.MainViewMaxHeight ?? 840;
@@ -434,11 +451,14 @@ public partial class CommonViewModel : ObservableObject
         IsShowSnakeCopyBtn = CurConfig?.IsShowSnakeCopyBtn ?? true;
         IsShowSmallHumpCopyBtn = CurConfig?.IsShowSmallHumpCopyBtn ?? true;
         IsShowLargeHumpCopyBtn = CurConfig?.IsShowLargeHumpCopyBtn ?? true;
+        IsShowTranslateBackBtn = CurConfig?.IsShowTranslateBackBtn ?? true;
         IgnoreHotkeysOnFullscreen = CurConfig?.IgnoreHotkeysOnFullscreen ?? false;
         StayMainViewWhenLoseFocus = CurConfig?.StayMainViewWhenLoseFocus ?? false;
         MainOcrLang = CurConfig?.MainOcrLang ?? LangEnum.auto;
         ShowMainOcrLang = CurConfig?.ShowMainOcrLang ?? false;
         HotkeyCopySuccessToast = CurConfig?.HotkeyCopySuccessToast ?? true;
+        OftenUsedLang = CurConfig?.OftenUsedLang ?? string.Empty;
+        UseCacheLocation = CurConfig?.UseCacheLocation ?? false;
 
         LoadHistorySizeType();
         ToastHelper.Show("重置配置", WindowType.Preference);
@@ -462,6 +482,24 @@ public partial class CommonViewModel : ObservableObject
     private void ShowEncryptInfo(string? obj)
     {
         if (obj is nameof(ProxyPassword)) IsProxyPasswordHide = !IsProxyPasswordHide;
+    }
+
+    [RelayCommand]
+    private async Task OftenUsedLangChangeAsync()
+    {
+        var view = new LangSettingView(OftenUsedLang)
+        {
+            Owner = Application.Current.Windows.OfType<PreferenceView>().FirstOrDefault(),
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        if (view.ShowDialog() == false) return;
+        OftenUsedLang = view.LangResult;
+        OnOftenUsedLang?.Invoke();
+
+        // 不等待上面回调可能会导致绑定出错
+        await Task.Delay(1000);
+
+        Save();
     }
 
     #region 主界面调整

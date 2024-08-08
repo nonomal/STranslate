@@ -7,7 +7,7 @@
              xmlns:model="clr-namespace:STranslate.Model;assembly=STranslate.Model"
              xmlns:vm="clr-namespace:STranslate.ViewModels.Preference"
              d:DataContext="{d:DesignInstance Type=vm:CommonViewModel}"
-             d:DesignHeight="450"
+             d:DesignHeight="1000"
              d:DesignWidth="800"
              d:FontFamily="{DynamicResource UserFont}"
              d:FontSize="{DynamicResource FontSize_Content}"
@@ -155,21 +155,45 @@
 
                             <DockPanel Margin="20,10">
                                 <TextBlock Text="全屏模式下忽略热键" />
-                                <TextBlock Style="{DynamicResource InfoTextBlock}" ToolTip="鼠标所处显示器应用全屏时禁用全局热键（建议游戏时打开）" />
+                                <TextBlock Style="{DynamicResource InfoTextBlock}"
+                                           ToolTip="鼠标所处显示器应用全屏时禁用全局热键（建议游戏时打开）" />
                                 <ToggleButton Height="26" HorizontalAlignment="Right"
                                               IsChecked="{Binding IgnoreHotkeysOnFullscreen}" />
+                            </DockPanel>
+
+                            <DockPanel Margin="20,10">
+                                <TextBlock Text="常用语言" />
+                                <TextBlock Style="{DynamicResource InfoTextBlock}"
+                                           ToolTip="配置选择语言时显示的语种列表" />
+                                <Button Height="26" HorizontalAlignment="Right"
+                                        BorderThickness="1" Content="点击设置"
+                                        Command="{Binding OftenUsedLangChangeCommand}" />
                             </DockPanel>
 
                             <DockPanel Margin="20,10">
                                 <TextBlock Text="截图翻译识别语种" />
                                 <TextBlock Style="{DynamicResource InfoTextBlock}" ToolTip="截图翻译时OCR的语种(包括静默OCR)" />
                                 <ComboBox Height="30"
+                                          x:Name="LangCb"
                                           BorderThickness="1"
                                           HorizontalAlignment="Right"
                                           DisplayMemberPath="Description"
-                                          ItemsSource="{Binding Source={common:Enumeration {x:Type model:LangEnum}}}"
                                           SelectedValue="{Binding MainOcrLang, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          SelectedValuePath="Value" />
+                                          SelectedValuePath="Value">
+                                    <ComboBox.ItemsSource>
+                                        <MultiBinding Converter="{StaticResource MultiLangFilterConverter}">
+                                            <Binding Source="{common:Enumeration {x:Type model:LangEnum}}" />
+                                            <Binding Path="InputVm.OftenUsedLang" />
+                                        </MultiBinding>
+                                    </ComboBox.ItemsSource>
+                                </ComboBox>
+                            </DockPanel>
+
+                            <DockPanel Margin="20,10">
+                                <TextBlock Text="使用缓存位置" />
+                                <TextBlock Style="{DynamicResource InfoTextBlock}" ToolTip="打开软件时是否使用上次打开位置" />
+                                <ToggleButton Height="26" HorizontalAlignment="Right"
+                                              IsChecked="{Binding UseCacheLocation}" />
                             </DockPanel>
                         </StackPanel>
                     </Border>
@@ -178,7 +202,14 @@
                     <Border Margin="8" Background="{DynamicResource BorderContentBackground}" CornerRadius="5">
                         <StackPanel Orientation="Vertical">
                             <DockPanel Margin="20,10">
-                                <TextBlock Text="服务端口" />
+                                <TextBlock Text="外部调用" />
+                                <TextBlock Style="{DynamicResource InfoTextBlock}" ToolTip="是否启用外部调用服务" />
+                                <ToggleButton Height="26" HorizontalAlignment="Right"
+                                              IsChecked="{Binding ExternalCall}" />
+                            </DockPanel>
+
+                            <DockPanel Margin="20,10" Visibility="{Binding ExternalCall, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="外部调用端口" />
                                 <TextBlock Style="{DynamicResource InfoTextBlock}" ToolTip="配置服务端口进行外部调用" />
                                 <common:PlaceholderTextBox MinWidth="100"
                                                            HorizontalAlignment="Right"
@@ -187,6 +218,8 @@
                                                            PreviewKeyDown="AcceptOnlyNumber"
                                                            Text="{Binding ExternalCallPort, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay, Converter={StaticResource TextBoxToIntConverter}, ConverterParameter=50020}" />
                             </DockPanel>
+
+                            <Separator />
 
                             <DockPanel Margin="20,10">
                                 <TextBlock Text="代理设置" />
@@ -362,14 +395,6 @@
                             </DockPanel>
 
                             <DockPanel Margin="20,10">
-                                <TextBlock HorizontalAlignment="Left" Text="非常规屏幕截图修复" />
-                                <TextBlock Style="{DynamicResource InfoTextBlock}"
-                                           ToolTip="非16:9的拓展显示器截图移位的问题&#13;如果出现问题尝试开启一下该选项" />
-                                <ToggleButton Height="26" HorizontalAlignment="Right"
-                                              IsChecked="{Binding UnconventionalScreen}" />
-                            </DockPanel>
-
-                            <DockPanel Margin="20,10">
                                 <TextBlock HorizontalAlignment="Left" Text="关闭鼠标划词保持置顶" />
                                 <TextBlock Style="{DynamicResource InfoTextBlock}" ToolTip="关闭鼠标划词功能后保持窗口置顶" />
                                 <ToggleButton Height="26" HorizontalAlignment="Right"
@@ -412,7 +437,8 @@
 
                             <DockPanel Margin="20,10">
                                 <TextBlock HorizontalAlignment="Left" Text="主窗口阴影(比较占用性能)" />
-                                <TextBlock Style="{DynamicResource InfoTextBlock}" ToolTip="主窗口是否显示显示阴影&#13;比较占用性能请自行选择" />
+                                <TextBlock Style="{DynamicResource InfoTextBlock}"
+                                           ToolTip="主窗口是否显示显示阴影&#13;比较占用性能请自行选择" />
                                 <ToggleButton Height="26" HorizontalAlignment="Right"
                                               IsChecked="{Binding MainViewShadow}" />
                             </DockPanel>
@@ -443,6 +469,13 @@
                                 <TextBlock Style="{DynamicResource InfoTextBlock}" ToolTip="主界面输出UI是否显示复制大驼峰结果按钮" />
                                 <ToggleButton Height="26" HorizontalAlignment="Right"
                                               IsChecked="{Binding IsShowLargeHumpCopyBtn}" />
+                            </DockPanel>
+
+                            <DockPanel Margin="20,10">
+                                <TextBlock HorizontalAlignment="Left" Text="显示回译按钮" />
+                                <TextBlock Style="{DynamicResource InfoTextBlock}" ToolTip="主界面输出UI是否显示回译按钮" />
+                                <ToggleButton Height="26" HorizontalAlignment="Right"
+                                              IsChecked="{Binding IsShowTranslateBackBtn}" />
                             </DockPanel>
 
                             <DockPanel Margin="20,10">

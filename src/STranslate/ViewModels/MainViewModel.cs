@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls.Primitives;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -109,15 +106,17 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 是否忽略全局热键
+    ///     是否忽略全局热键
     /// </summary>
-    public bool ShouldIgnoreHotkeys => (Config?.IgnoreHotkeysOnFullscreen ?? false) &&  WindowHelper.IsWindowFullscreen();
+    public bool ShouldIgnoreHotkeys =>
+        (Config?.IgnoreHotkeysOnFullscreen ?? false) && WindowHelper.IsWindowFullscreen();
 
     public void Reset()
     {
         _isInitial = true;
         SourceLang = Config?.SourceLang ?? LangEnum.auto;
         TargetLang = Config?.TargetLang ?? LangEnum.auto;
+        InputVM.OftenUsedLang = Config?.OftenUsedLang ?? string.Empty;
         IsEnableIncrementalTranslation = Config?.IncrementalTranslation ?? false ? ConstStr.TAGTRUE : ConstStr.TAGFALSE;
         _ = ReplaceVm.ReplaceProp.ActiveService; //激活ReplaceVm
         _isInitial = false;
@@ -185,15 +184,51 @@ public partial class MainViewModel : ObservableObject
     private void RegisterHotkeys(Window view)
     {
         HotkeyHelper.InitialHook(view);
-        HotkeyHelper.Register(HotkeyHelper.InputTranslateId, () => { if (ShouldIgnoreHotkeys) return; NotifyIconVM.InputTranslateCommand.Execute(view); });
-        HotkeyHelper.Register(HotkeyHelper.CrosswordTranslateId, () => { if (ShouldIgnoreHotkeys) return; NotifyIconVM.CrossWordTranslateCommand.Execute(view); });
-        HotkeyHelper.Register(HotkeyHelper.ScreenShotTranslateId, () => { if (ShouldIgnoreHotkeys) return; NotifyIconVM.ScreenShotTranslateCommand.Execute(null); });
-        HotkeyHelper.Register(HotkeyHelper.ReplaceTranslateId, () => { if (ShouldIgnoreHotkeys) return; NotifyIconVM.ReplaceTranslateCommand.Execute(view); });
-        HotkeyHelper.Register(HotkeyHelper.OpenMainWindowId, () => { if (ShouldIgnoreHotkeys) return; NotifyIconVM.OpenMainWindowCommand.Execute(view); });
-        HotkeyHelper.Register(HotkeyHelper.MousehookTranslateId, () => { if (ShouldIgnoreHotkeys) return; NotifyIconVM.MousehookTranslateCommand.Execute(view); });
-        HotkeyHelper.Register(HotkeyHelper.OCRId, () => { if (ShouldIgnoreHotkeys) return; NotifyIconVM.OCRCommand.Execute(null); });
-        HotkeyHelper.Register(HotkeyHelper.SilentOCRId, () => { if (ShouldIgnoreHotkeys) return; NotifyIconVM.SilentOCRCommand.Execute(null); });
-        HotkeyHelper.Register(HotkeyHelper.ClipboardMonitorId, () => { if (ShouldIgnoreHotkeys) return; NotifyIconVM.ClipboardMonitorCommand.Execute(view); });
+        HotkeyHelper.Register(HotkeyHelper.InputTranslateId, () =>
+        {
+            if (ShouldIgnoreHotkeys) return;
+            NotifyIconVM.InputTranslateCommand.Execute(view);
+        });
+        HotkeyHelper.Register(HotkeyHelper.CrosswordTranslateId, () =>
+        {
+            if (ShouldIgnoreHotkeys) return;
+            NotifyIconVM.CrossWordTranslateCommand.Execute(view);
+        });
+        HotkeyHelper.Register(HotkeyHelper.ScreenShotTranslateId, () =>
+        {
+            if (ShouldIgnoreHotkeys) return;
+            NotifyIconVM.ScreenShotTranslateCommand.Execute(null);
+        });
+        HotkeyHelper.Register(HotkeyHelper.ReplaceTranslateId, () =>
+        {
+            if (ShouldIgnoreHotkeys) return;
+            NotifyIconVM.ReplaceTranslateCommand.Execute(view);
+        });
+        HotkeyHelper.Register(HotkeyHelper.OpenMainWindowId, () =>
+        {
+            if (ShouldIgnoreHotkeys) return;
+            NotifyIconVM.OpenMainWindowCommand.Execute(view);
+        });
+        HotkeyHelper.Register(HotkeyHelper.MousehookTranslateId, () =>
+        {
+            if (ShouldIgnoreHotkeys) return;
+            NotifyIconVM.MousehookTranslateCommand.Execute(view);
+        });
+        HotkeyHelper.Register(HotkeyHelper.OCRId, () =>
+        {
+            if (ShouldIgnoreHotkeys) return;
+            NotifyIconVM.OCRCommand.Execute(null);
+        });
+        HotkeyHelper.Register(HotkeyHelper.SilentOCRId, () =>
+        {
+            if (ShouldIgnoreHotkeys) return;
+            NotifyIconVM.SilentOCRCommand.Execute(null);
+        });
+        HotkeyHelper.Register(HotkeyHelper.ClipboardMonitorId, () =>
+        {
+            if (ShouldIgnoreHotkeys) return;
+            NotifyIconVM.ClipboardMonitorCommand.Execute(view);
+        });
         if (
             HotkeyHelper.Hotkeys!.InputTranslate.Conflict
             || HotkeyHelper.Hotkeys!.CrosswordTranslate.Conflict
@@ -317,7 +352,20 @@ public partial class MainViewModel : ObservableObject
         if (Config?.IsRemoveLineBreakGettingWords ?? false)
             content = StringUtil.RemoveLineBreaks(content);
 
-        InputVM.InputContent = content;
+
+        //增量翻译
+        if (Config?.IncrementalTranslation ?? false)
+        {
+            NotifyIconVM.ClearOutput();
+            var input = InputVM.InputContent;
+            InputVM.InputContent = string.IsNullOrEmpty(input) ? string.Empty : input + " ";
+        }
+        else
+        {
+            NotifyIconVM.ClearAll();
+        }
+
+        InputVM.InputContent += content;
 
         //如果重复执行先取消上一步操作
         OutputVM.ExpanderHeaderCancelCommand.Execute(null);
@@ -414,6 +462,7 @@ public partial class MainViewModel : ObservableObject
         ShowMainOcrLang = Config?.ShowMainOcrLang ?? false;
     }
 
+
     [RelayCommand]
     private void SelectedService(List<object> list)
     {
@@ -461,6 +510,18 @@ public partial class MainViewModel : ObservableObject
 
         CommonSettingVM.MainOcrLang = lang;
         CommonSettingVM.SaveCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private void ResetLocation(Window window)
+    {
+        // 计算窗口左上角在屏幕上的位置
+        var left = (SystemParameters.PrimaryScreenWidth - window.Width) / 2;
+        var top = (SystemParameters.PrimaryScreenHeight - 600) / 2;
+
+        // 设置窗口位置
+        window.Left = left;
+        window.Top = top;
     }
 
     #region 显示图标
